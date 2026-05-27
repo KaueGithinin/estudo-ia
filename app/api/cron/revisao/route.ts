@@ -58,7 +58,7 @@ export async function GET(req: Request) {
       const duvidasTexto = (duvidas || []).map((d: { description: string }) => d.description)
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL
-        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://estudo-ia.vercel.app')
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://ixa.app')
 
       try {
         await enviarEmailRevisao({

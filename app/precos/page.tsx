@@ -31,7 +31,7 @@ export default function PrecosPage() {
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Brain className="text-violet-400" size={22} />
-          <span className="font-bold">EstudoIA</span>
+          <span className="font-bold">Ixa</span>
         </Link>
         <div className="flex gap-3">
           <Link href="/sign-in" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">

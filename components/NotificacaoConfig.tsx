@@ -138,7 +138,7 @@ export default function NotificacaoConfig({ sessionId }: Props) {
           />
           <span className="text-xs text-gray-400 leading-relaxed">
             <Shield size={11} className="inline mr-1 text-violet-400" />
-            Concordo em receber emails de revisão de estudo do EstudoIA. Posso cancelar
+            Concordo em receber emails de revisão de estudo do Ixa. Posso cancelar
             a qualquer momento desativando as notificações.{" "}
             <a href="/privacidade" className="text-violet-400 hover:underline" target="_blank">
               Política de Privacidade

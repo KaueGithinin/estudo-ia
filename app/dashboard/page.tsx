@@ -64,7 +64,7 @@ export default function DashboardPage() {
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="text-violet-400" size={24} />
-          <span className="font-bold text-lg">EstudoIA</span>
+          <span className="font-bold text-lg">Ixa</span>
         </div>
         <div className="flex items-center gap-4">
           <Link

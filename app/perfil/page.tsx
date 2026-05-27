@@ -65,7 +65,7 @@ export default function PerfilPage() {
 
   const handleCompartilhar = () => {
     if (!stats) return;
-    const texto = `Já estudei ${stats.totalBlocos} blocos de conteúdo no EstudoIA com score médio de ${stats.scoresMedio}/100. Aprenda de verdade em estudo-ia.vercel.app 🧠`;
+    const texto = `Já estudei ${stats.totalBlocos} blocos de conteúdo no Ixa com score médio de ${stats.scoresMedio}/100. Aprenda de verdade em ixa.app 🧠`;
     navigator.clipboard.writeText(texto).then(() => {
       alert("Copiado! Cole no WhatsApp ou Instagram.");
     });

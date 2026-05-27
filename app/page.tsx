@@ -8,7 +8,7 @@ export default function LandingPage() {
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="text-violet-400" size={24} />
-          <span className="font-bold text-lg">EstudoIA</span>
+          <span className="font-bold text-lg">Ixa</span>
         </div>
         <div className="flex gap-3">
           <Link
@@ -133,7 +133,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-8 text-center text-sm text-gray-500">
-        <p className="mb-2">EstudoIA — Aprenda de verdade, não só no dia da prova.</p>
+        <p className="mb-2">Ixa — Aprenda de verdade, não só no dia da prova.</p>
         <p className="text-xs text-gray-600">
           <Link href="/privacidade" className="hover:text-gray-400 transition-colors">Privacidade</Link>
           {" · "}

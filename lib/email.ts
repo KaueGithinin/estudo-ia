@@ -51,7 +51,7 @@ export async function enviarEmailRevisao({
     <div style="text-align:center;margin-bottom:32px;">
       <div style="display:inline-flex;align-items:center;gap:8px;">
         <span style="font-size:24px;">🧠</span>
-        <span style="color:#a78bfa;font-size:20px;font-weight:700;">EstudoIA</span>
+        <span style="color:#a78bfa;font-size:20px;font-weight:700;">Ixa</span>
       </div>
       <p style="color:#6b7280;margin-top:8px;font-size:14px;">Hora de revisar!</p>
     </div>
@@ -92,7 +92,7 @@ export async function enviarEmailRevisao({
 
     <!-- Footer -->
     <p style="text-align:center;color:#4b5563;font-size:12px;">
-      EstudoIA — Aprenda de verdade, não só no dia da prova.
+      Ixa — Aprenda de verdade, não só no dia da prova.
     </p>
 
   </div>
@@ -100,7 +100,7 @@ export async function enviarEmailRevisao({
 </html>`
 
   return resend.emails.send({
-    from: 'EstudoIA <onboarding@resend.dev>',
+    from: 'Ixa <onboarding@resend.dev>',
     to: para,
     subject: `📚 Revisar agora: ${blocoTitulo}`,
     html,

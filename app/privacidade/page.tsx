@@ -7,7 +7,7 @@ export default function PrivacidadePage() {
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center gap-2">
         <Link href="/" className="flex items-center gap-2">
           <Brain className="text-violet-400" size={22} />
-          <span className="font-bold">EstudoIA</span>
+          <span className="font-bold">Ixa</span>
         </Link>
       </nav>
 
@@ -20,7 +20,7 @@ export default function PrivacidadePage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">1. Quem somos</h2>
             <p>
-              O EstudoIA é um serviço de estudo baseado em active recall com inteligência artificial,
+              O Ixa é um serviço de estudo baseado em active recall com inteligência artificial,
               desenvolvido e operado por Antonio Kaue (antonio77kaue@gmail.com).
               Esta política descreve como coletamos, usamos e protegemos seus dados pessoais,
               em conformidade com a Lei Geral de Proteção de Dados — LGPD (Lei nº 13.709/2018).

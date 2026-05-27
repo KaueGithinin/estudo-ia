@@ -7,7 +7,7 @@ export default function TermosPage() {
       <nav className="border-b border-gray-800 px-6 py-4 flex items-center gap-2">
         <Link href="/" className="flex items-center gap-2">
           <Brain className="text-violet-400" size={22} />
-          <span className="font-bold">EstudoIA</span>
+          <span className="font-bold">Ixa</span>
         </Link>
       </nav>
 
@@ -20,7 +20,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">1. Aceitação dos termos</h2>
             <p>
-              Ao criar uma conta ou usar o EstudoIA, você concorda com estes Termos de Uso.
+              Ao criar uma conta ou usar o Ixa, você concorda com estes Termos de Uso.
               Se você não concordar, não utilize o serviço.
             </p>
           </section>
@@ -28,7 +28,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">2. Descrição do serviço</h2>
             <p>
-              O EstudoIA é uma plataforma de estudo que utiliza inteligência artificial para
+              O Ixa é uma plataforma de estudo que utiliza inteligência artificial para
               dividir conteúdos em blocos temáticos, avaliar explicações dos usuários e
               identificar lacunas de aprendizado. O serviço é oferecido em plano gratuito
               (com limitações) e plano pago (Pro).
@@ -78,7 +78,7 @@ export default function TermosPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">7. Limitação de responsabilidade</h2>
             <p>
-              O EstudoIA é fornecido &ldquo;como está&rdquo;. Não garantimos que o serviço
+              O Ixa é fornecido &ldquo;como está&rdquo;. Não garantimos que o serviço
               será ininterrupto ou livre de erros. Não somos responsáveis por decisões
               tomadas com base nas avaliações geradas pela IA.
             </p>

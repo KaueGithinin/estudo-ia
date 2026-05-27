@@ -1,4 +1,4 @@
-# Checklist de Deploy — EstudoIA
+# Checklist de Deploy — Ixa
 
 > Tudo que precisa ser feito manualmente. O código está pronto e buildando.
 > Siga a ordem — cada fase depende da anterior.
@@ -37,7 +37,8 @@
    - Copiar **Secret key** (`sk_live_...`)
 3. Criar o produto:
    - **Products → Add product**
-   - Nome: `EstudoIA Pro`
+   - Nome: `Ixa Pro`
+
    - Preço: `R$ 19,00` → Recorrente → Mensal
    - Salvar → copiar o **Price ID** (`price_...`)
 4. Adicionar no `.env.local`:
@@ -59,11 +60,11 @@
 4. Aguardar verificação (pode levar alguns minutos)
 5. Abrir `lib/email.ts` linha 92 e trocar:
    ```
-   from: 'EstudoIA <onboarding@resend.dev>',
+   from: 'Ixa <onboarding@resend.dev>',
    ```
    por:
    ```
-   from: 'EstudoIA <noreply@seudominio.com.br>',
+   from: 'Ixa <noreply@seudominio.com.br>',
    ```
 
 ---

@@ -16,7 +16,7 @@ function getRatelimit(): Ratelimit {
       redis: Redis.fromEnv(),
       limiter: Ratelimit.slidingWindow(10, '1 m'),
       analytics: true,
-      prefix: 'estudo-ia',
+      prefix: 'ixa',
     })
   }
   return ratelimitInstance
