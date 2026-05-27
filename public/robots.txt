@@ -1,0 +1,17 @@
+User-agent: *
+# Páginas públicas — pode indexar
+Allow: /$
+Allow: /precos$
+Allow: /privacidade$
+Allow: /termos$
+
+# App interno — não indexar
+Disallow: /dashboard
+Disallow: /nova-sessao
+Disallow: /sessao/
+Disallow: /bloco/
+Disallow: /minhas-duvidas
+Disallow: /perfil
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /api/

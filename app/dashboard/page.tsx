@@ -10,22 +10,33 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  User,
+  Zap,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import type { StudySession } from "@/lib/types";
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroLoad, setErroLoad] = useState(false);
+  const [planoAtivado, setPlanoAtivado] = useState(false);
 
   useEffect(() => {
+    // Detectar retorno do Stripe (?plano=ativado)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("plano") === "ativado") setPlanoAtivado(true);
+
     async function loadSessions() {
-      const { data } = await supabase
-        .from("study_sessions")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setSessions(data || []);
-      setLoading(false);
+      try {
+        const res = await fetch("/api/sessions");
+        if (!res.ok) throw new Error("falha");
+        const data = await res.json();
+        setSessions(data.sessions || []);
+      } catch {
+        setErroLoad(true);
+      } finally {
+        setLoading(false);
+      }
     }
     loadSessions();
   }, []);
@@ -35,12 +46,15 @@ export default function DashboardPage() {
       return <CheckCircle size={16} className="text-green-400" />;
     if (status === "ready")
       return <BookOpen size={16} className="text-violet-400" />;
+    if (status === "error")
+      return <AlertCircle size={16} className="text-red-400" />;
     return <Clock size={16} className="text-amber-400" />;
   };
 
   const statusLabel = (status: string) => {
     if (status === "completed") return "Concluído";
     if (status === "ready") return "Pronto para estudar";
+    if (status === "error") return "Erro ao processar";
     return "Processando...";
   };
 
@@ -60,11 +74,30 @@ export default function DashboardPage() {
             <AlertCircle size={16} />
             Minhas Dúvidas
           </Link>
+          <Link
+            href="/perfil"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            <User size={16} />
+            Perfil
+          </Link>
           <UserButton />
         </div>
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
+
+        {/* Banner de plano ativado (vindo do Stripe) */}
+        {planoAtivado && (
+          <div className="flex items-center gap-3 bg-violet-500/10 border border-violet-500/30 rounded-xl px-5 py-4 mb-6">
+            <Zap size={20} className="text-violet-400 shrink-0" />
+            <div>
+              <p className="font-semibold text-violet-300">Plano Pro ativado! 🎉</p>
+              <p className="text-sm text-violet-400/70">Agora você tem sessões ilimitadas e notificações por email.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -85,6 +118,11 @@ export default function DashboardPage() {
         {/* Lista de sessões */}
         {loading ? (
           <div className="text-center py-20 text-gray-500">Carregando...</div>
+        ) : erroLoad ? (
+          <div className="text-center py-20">
+            <AlertCircle size={48} className="text-red-500/50 mx-auto mb-4" />
+            <p className="text-gray-400">Erro ao carregar sessões. Recarregue a página.</p>
+          </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-20">
             <BookOpen size={48} className="text-gray-700 mx-auto mb-4" />
@@ -136,6 +174,13 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800 py-6 text-center text-xs text-gray-600">
+        <Link href="/privacidade" className="hover:text-gray-400 transition-colors">Privacidade</Link>
+        {" · "}
+        <Link href="/termos" className="hover:text-gray-400 transition-colors">Termos</Link>
+      </footer>
     </div>
   );
 }

@@ -1,7 +1,12 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { gerarBlocos } from '@/lib/anthropic'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
+import { gerarBlocosSchema } from '@/lib/schemas'
+import { checkRateLimit } from '@/lib/ratelimit'
+
+// Groq pode demorar em textos longos — aumentar timeout do Vercel
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,21 +15,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { texto, titulo } = await req.json()
-
-    if (!texto || texto.trim().length < 100) {
+    // Rate limiting
+    const { success } = await checkRateLimit(userId)
+    if (!success) {
       return NextResponse.json(
-        { error: 'O texto deve ter pelo menos 100 caracteres' },
-        { status: 400 }
+        { error: 'Muitas requisições. Aguarde um momento e tente novamente.' },
+        { status: 429, headers: { 'Retry-After': '60' } }
       )
     }
 
-    // 1. Criar a sessão de estudo no banco
-    const { data: session, error: sessionError } = await supabase
+    // Validação com Zod
+    const body = await req.json()
+    const parsed = gerarBlocosSchema.safeParse(body)
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message || 'Dados inválidos'
+      return NextResponse.json({ error: msg }, { status: 400 })
+    }
+    const { texto, titulo } = parsed.data
+
+    // 1. Verificar plano do usuário
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('plan')
+      .eq('user_id', userId)
+      .single()
+
+    const plano = profile?.plan || 'free'
+
+    // 2. Criar a sessão de estudo no banco
+    const { data: session, error: sessionError } = await supabaseAdmin
       .from('study_sessions')
       .insert({
         user_id: userId,
-        title: titulo || 'Sessão sem título',
+        title: titulo?.trim() || 'Sessão sem título',
         original_text: texto,
         status: 'processing',
       })
@@ -33,10 +56,43 @@ export async function POST(req: NextRequest) {
 
     if (sessionError) throw sessionError
 
-    // 2. Chamar Claude para gerar os blocos
-    const resultado = await gerarBlocos(texto)
+    // 3. Verificar limite do plano APÓS o insert — elimina race condition
+    // (dois requests simultâneos passariam pelo count pré-insert, mas não pelo pós-insert)
+    if (plano === 'free') {
+      const iniciodoMes = new Date()
+      iniciodoMes.setDate(1)
+      iniciodoMes.setHours(0, 0, 0, 0)
 
-    // 3. Salvar os blocos no banco
+      const { count } = await supabaseAdmin
+        .from('study_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', iniciodoMes.toISOString())
+
+      if ((count ?? 0) > 3) {
+        // Ultrapassou — desfazer o insert
+        await supabaseAdmin.from('study_sessions').delete().eq('id', session.id)
+        return NextResponse.json(
+          { error: 'Limite do plano grátis atingido (3 sessões/mês). Faça upgrade para o plano Pro para sessões ilimitadas.', upgrade: true },
+          { status: 403 }
+        )
+      }
+    }
+
+    // 4. Chamar IA para gerar os blocos
+    let resultado
+    try {
+      resultado = await gerarBlocos(texto)
+    } catch (aiError) {
+      // IA falhou: marcar sessão como erro para não ficar presa em 'processing'
+      await supabaseAdmin
+        .from('study_sessions')
+        .update({ status: 'error' })
+        .eq('id', session.id)
+      throw aiError
+    }
+
+    // 5. Salvar os blocos no banco
     const blocosParaSalvar = resultado.blocks.map((bloco, index) => ({
       session_id: session.id,
       title: bloco.title,
@@ -45,15 +101,21 @@ export async function POST(req: NextRequest) {
       order_index: index,
     }))
 
-    const { data: blocks, error: blocksError } = await supabase
+    const { data: blocks, error: blocksError } = await supabaseAdmin
       .from('blocks')
       .insert(blocosParaSalvar)
       .select()
 
-    if (blocksError) throw blocksError
+    if (blocksError) {
+      await supabaseAdmin
+        .from('study_sessions')
+        .update({ status: 'error' })
+        .eq('id', session.id)
+      throw blocksError
+    }
 
     // 4. Atualizar status da sessão para 'ready'
-    await supabase
+    await supabaseAdmin
       .from('study_sessions')
       .update({ status: 'ready' })
       .eq('id', session.id)
@@ -63,11 +125,7 @@ export async function POST(req: NextRequest) {
       blocks_count: blocks.length,
     })
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('❌ Erro ao gerar blocos:', msg)
-    return NextResponse.json(
-      { error: `Erro: ${msg}` },
-      { status: 500 }
-    )
+    console.error('❌ Erro ao gerar blocos:', error instanceof Error ? error.message : 'erro')
+    return NextResponse.json({ error: 'Erro ao processar o conteúdo' }, { status: 500 })
   }
 }

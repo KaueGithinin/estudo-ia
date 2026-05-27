@@ -1,13 +1,26 @@
 import Groq from "groq-sdk";
 import type { GeneratedBlocks, EvaluationResult } from "./types";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Lazy init — evita falha no build quando GROQ_API_KEY não está no ambiente
+let _groq: Groq | null = null
+
+function getGroq(): Groq {
+  if (!_groq) {
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      throw new Error(
+        'GROQ_API_KEY não configurado. ' +
+        'Crie uma chave grátis em https://console.groq.com e adicione ao .env.local'
+      )
+    }
+    _groq = new Groq({ apiKey })
+  }
+  return _groq
+}
 
 // ─── Prompt 1: Estruturar conteúdo em blocos ──────────────────────────────────
 export async function gerarBlocos(texto: string): Promise<GeneratedBlocks> {
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroq().chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
       {
@@ -53,7 +66,7 @@ export async function avaliarExplicacao(
   blocoKeyPoints: string[],
   explicacaoAluno: string
 ): Promise<EvaluationResult> {
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroq().chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
       {

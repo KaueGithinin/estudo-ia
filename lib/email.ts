@@ -2,6 +2,16 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+// Escapa caracteres HTML para evitar injeção no template de email
+function esc(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 interface EnviarRevisaoParams {
   para: string
   sessaoTitulo: string
@@ -22,12 +32,12 @@ export async function enviarEmailRevisao({
   blocoUrl,
 }: EnviarRevisaoParams) {
   const keyPointsHtml = keyPoints
-    .map((p) => `<li style="margin-bottom:6px;">${p}</li>`)
+    .map((p) => `<li style="margin-bottom:6px;">${esc(p)}</li>`)
     .join('')
 
   const duvidasHtml =
     duvidas.length > 0
-      ? duvidas.map((d) => `<li style="margin-bottom:6px;color:#f59e0b;">${d}</li>`).join('')
+      ? duvidas.map((d) => `<li style="margin-bottom:6px;color:#f59e0b;">${esc(d)}</li>`).join('')
       : '<li style="color:#6b7280;">Nenhuma dúvida registrada neste bloco 🎉</li>'
 
   const html = `
@@ -48,13 +58,13 @@ export async function enviarEmailRevisao({
 
     <!-- Sessão -->
     <p style="color:#9ca3af;font-size:13px;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Sessão</p>
-    <h1 style="color:#ffffff;font-size:22px;margin:0 0 24px;">${sessaoTitulo}</h1>
+    <h1 style="color:#ffffff;font-size:22px;margin:0 0 24px;">${esc(sessaoTitulo)}</h1>
 
     <!-- Bloco -->
     <div style="background:#1a1a2e;border:1px solid #2d2d3d;border-radius:12px;padding:24px;margin-bottom:24px;">
       <p style="color:#a78bfa;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Bloco para revisar</p>
-      <h2 style="color:#ffffff;font-size:18px;margin:0 0 16px;">${blocoTitulo}</h2>
-      <p style="color:#d1d5db;font-size:14px;line-height:1.7;margin:0;">${blocoConteudo.substring(0, 400)}${blocoConteudo.length > 400 ? '...' : ''}</p>
+      <h2 style="color:#ffffff;font-size:18px;margin:0 0 16px;">${esc(blocoTitulo)}</h2>
+      <p style="color:#d1d5db;font-size:14px;line-height:1.7;margin:0;">${esc(blocoConteudo.substring(0, 400))}${blocoConteudo.length > 400 ? '...' : ''}</p>
     </div>
 
     <!-- Pontos-chave -->

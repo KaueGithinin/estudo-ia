@@ -12,6 +12,12 @@ export default function LandingPage() {
         </div>
         <div className="flex gap-3">
           <Link
+            href="/precos"
+            className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
+          >
+            Preços
+          </Link>
+          <Link
             href="/sign-in"
             className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors"
           >
@@ -127,7 +133,14 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-8 text-center text-sm text-gray-500">
-        EstudoIA — Aprenda de verdade, não só no dia da prova.
+        <p className="mb-2">EstudoIA — Aprenda de verdade, não só no dia da prova.</p>
+        <p className="text-xs text-gray-600">
+          <Link href="/privacidade" className="hover:text-gray-400 transition-colors">Privacidade</Link>
+          {" · "}
+          <Link href="/termos" className="hover:text-gray-400 transition-colors">Termos</Link>
+          {" · "}
+          <Link href="/precos" className="hover:text-gray-400 transition-colors">Preços</Link>
+        </p>
       </footer>
     </main>
   );

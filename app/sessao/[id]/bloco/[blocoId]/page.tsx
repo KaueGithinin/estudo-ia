@@ -13,7 +13,6 @@ import {
   ChevronRight,
   RotateCcw,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import type { Block, EvaluationResult } from "@/lib/types";
 
 type Phase = "reading" | "explaining" | "result";
@@ -28,18 +27,24 @@ export default function BlocoPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
 
   useEffect(() => {
     async function loadBlock() {
-      const { data } = await supabase
-        .from("blocks")
-        .select("*")
-        .eq("id", blocoId)
-        .single();
-      setBlock(data);
+      try {
+        const res = await fetch(`/api/blocks/${blocoId}`);
+        if (!res.ok) {
+          router.push(`/sessao/${id}`);
+          return;
+        }
+        const data = await res.json();
+        setBlock(data.block);
+      } catch {
+        router.push(`/sessao/${id}`);
+      }
     }
     loadBlock();
-  }, [blocoId]);
+  }, [blocoId, id, router]);
 
   const handleExplicar = async () => {
     if (explicacao.trim().length < 20) {
@@ -68,6 +73,7 @@ export default function BlocoPage() {
       }
 
       setResult(data.avaliacao);
+      if (data.aviso) setAviso(data.aviso);
       setPhase("result");
     } catch {
       setErro("Erro de conexão. Tente novamente.");
@@ -203,6 +209,12 @@ export default function BlocoPage() {
         {/* ── FASE 2: RESULTADO ── */}
         {phase === "result" && result && (
           <div className="space-y-6">
+            {/* Aviso de dúvidas não salvas */}
+            {aviso && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-400 text-sm">
+                ⚠️ {aviso}
+              </div>
+            )}
             {/* Score */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center">
               <div className="text-6xl font-bold mb-2">

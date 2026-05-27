@@ -5,7 +5,7 @@ export interface StudySession {
   user_id: string
   title: string
   original_text: string
-  status: 'processing' | 'ready' | 'completed'
+  status: 'processing' | 'ready' | 'completed' | 'error'
   created_at: string
 }
 

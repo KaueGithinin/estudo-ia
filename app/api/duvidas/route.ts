@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 // GET: listar dúvidas do usuário
 export async function GET() {
@@ -10,21 +10,28 @@ export async function GET() {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('doubts')
       .select(`
-        *,
-        block:blocks(id, title, session_id, content, session:study_sessions(id, title))
+        id, description, block_id, created_at,
+        block:blocks(id, title, session_id, session:study_sessions(id, title, user_id))
       `)
       .eq('user_id', userId)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
+      .limit(200) // teto para não sobrecarregar — paginação futura se necessário
 
     if (error) throw error
 
-    return NextResponse.json({ doubts: data })
+    // Dupla proteção: filtrar no JS para garantir que os blocos pertencem ao usuário
+    const doubtsSeguras = (data || []).filter((d) => {
+      const sessionUserId = (d.block as { session?: { user_id?: string } } | null)?.session?.user_id
+      return !sessionUserId || sessionUserId === userId
+    })
+
+    return NextResponse.json({ doubts: doubtsSeguras })
   } catch (error) {
-    console.error('Erro ao buscar dúvidas:', error)
+    console.error('Erro ao buscar dúvidas:', error instanceof Error ? error.message : 'erro')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
@@ -37,19 +44,24 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { doubt_id } = await req.json()
+    const body = await req.json()
+    const { doubt_id } = body
 
-    const { error } = await supabase
+    if (!doubt_id || typeof doubt_id !== 'string') {
+      return NextResponse.json({ error: 'doubt_id inválido' }, { status: 400 })
+    }
+
+    const { error } = await supabaseAdmin
       .from('doubts')
       .update({ resolved: true })
       .eq('id', doubt_id)
-      .eq('user_id', userId)
+      .eq('user_id', userId) // ownership check
 
     if (error) throw error
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Erro ao resolver dúvida:', error)
+    console.error('Erro ao resolver dúvida:', error instanceof Error ? error.message : 'erro')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

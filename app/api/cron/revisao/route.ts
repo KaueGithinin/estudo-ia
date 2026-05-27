@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { enviarEmailRevisao } from '@/lib/email'
 
 // Chamado automaticamente pelo Vercel Cron a cada hora
@@ -12,11 +12,12 @@ export async function GET(req: Request) {
   try {
     const agora = new Date()
 
-    // Buscar configurações ativas
-    const { data: configs } = await supabase
+    // Buscar configurações ativas COM consentimento registrado (LGPD)
+    const { data: configs } = await supabaseAdmin
       .from('notification_settings')
       .select('*, session:study_sessions(id, title)')
       .eq('enabled', true)
+      .not('consent_given_at', 'is', null)
 
     if (!configs || configs.length === 0) {
       return NextResponse.json({ enviados: 0 })
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
       }
 
       // Buscar blocos em ordem
-      const { data: blocks } = await supabase
+      const { data: blocks } = await supabaseAdmin
         .from('blocks')
         .select('*')
         .eq('session_id', config.session_id)
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
       const blocoEscolhido = blocks[proximoIndex]
 
       // Dúvidas deste bloco
-      const { data: duvidas } = await supabase
+      const { data: duvidas } = await supabaseAdmin
         .from('doubts')
         .select('description')
         .eq('block_id', blocoEscolhido.id)
@@ -56,7 +57,8 @@ export async function GET(req: Request) {
 
       const duvidasTexto = (duvidas || []).map((d: { description: string }) => d.description)
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://estudo-ia.vercel.app'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL
+        || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://estudo-ia.vercel.app')
 
       try {
         await enviarEmailRevisao({
@@ -69,7 +71,7 @@ export async function GET(req: Request) {
           blocoUrl: `${appUrl}/sessao/${config.session_id}/bloco/${blocoEscolhido.id}`,
         })
 
-        await supabase
+        await supabaseAdmin
           .from('notification_settings')
           .update({
             last_sent_at: agora.toISOString(),
@@ -79,13 +81,13 @@ export async function GET(req: Request) {
 
         enviados++
       } catch (e) {
-        console.error(`Erro ao enviar para ${config.user_email}:`, e)
+        console.error(`Erro ao enviar email user_id ${config.user_id}:`, e instanceof Error ? e.message : 'erro desconhecido')
       }
     }
 
     return NextResponse.json({ enviados, total: configs.length })
   } catch (error) {
-    console.error('Erro no cron:', error)
+    console.error('Erro no cron:', error instanceof Error ? error.message : 'erro desconhecido')
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

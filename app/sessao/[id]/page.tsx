@@ -12,7 +12,6 @@ import {
   Clock,
   ChevronRight,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import NotificacaoConfig from "@/components/NotificacaoConfig";
 import type { Block, StudySession } from "@/lib/types";
 
@@ -29,50 +28,20 @@ export default function SessaoPage() {
 
   useEffect(() => {
     async function loadData() {
-      // Buscar sessão
-      const { data: sessionData } = await supabase
-        .from("study_sessions")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      setSession(sessionData);
-
-      // Buscar blocos com o score mais recente
-      const { data: blocksData } = await supabase
-        .from("blocks")
-        .select(`
-          *,
-          reviews(score, missing_points, created_at)
-        `)
-        .eq("session_id", id)
-        .order("order_index");
-
-      if (blocksData) {
-        const blocksWithStatus = blocksData.map((block) => {
-          const reviews = block.reviews || [];
-          if (reviews.length === 0) {
-            return { ...block, review_status: "pending" as const, last_score: null };
-          }
-          // Pegar a review mais recente
-          const latest = reviews.sort(
-            (a: { created_at: string }, b: { created_at: string }) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0];
-          const hasDubts =
-            latest.missing_points && latest.missing_points.length > 0;
-          return {
-            ...block,
-            review_status: hasDubts
-              ? ("with_doubts" as const)
-              : ("studied" as const),
-            last_score: latest.score,
-          };
-        });
-        setBlocks(blocksWithStatus);
+      try {
+        const res = await fetch(`/api/sessions/${id}`);
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setSession(data.session);
+        setBlocks(data.blocks || []);
+      } catch {
+        // erro de rede — não travar na tela de carregando
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
     loadData();
   }, [id]);

@@ -1,6 +1,6 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { enviarEmailRevisao } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
@@ -8,25 +8,27 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const user = await currentUser()
-    const userEmail = user?.emailAddresses[0]?.emailAddress
-    if (!userEmail) return NextResponse.json({ error: 'Email não encontrado' }, { status: 400 })
+    const body = await req.json()
+    const { session_id } = body
 
-    const { session_id } = await req.json()
+    if (!session_id || typeof session_id !== 'string') {
+      return NextResponse.json({ error: 'session_id inválido' }, { status: 400 })
+    }
 
-    // 1. Buscar a sessão
-    const { data: session } = await supabase
+    // 1. Verificar ownership da sessão
+    const { data: session } = await supabaseAdmin
       .from('study_sessions')
-      .select('*')
+      .select('id, title')
       .eq('id', session_id)
+      .eq('user_id', userId)
       .single()
 
-    if (!session) return NextResponse.json({ error: 'Sessão não encontrada' }, { status: 404 })
+    if (!session) return NextResponse.json({ error: 'Sessão não encontrada ou sem permissão' }, { status: 403 })
 
     // 2. Buscar todos os blocos em ordem
-    const { data: blocks } = await supabase
+    const { data: blocks } = await supabaseAdmin
       .from('blocks')
-      .select('*')
+      .select('id, title, content, key_points, order_index')
       .eq('session_id', session_id)
       .order('order_index')
 
@@ -34,33 +36,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nenhum bloco encontrado' }, { status: 404 })
     }
 
-    // 3. Buscar configuração de notificação para saber qual bloco foi enviado por último
-    const { data: config } = await supabase
+    // 3. Buscar configuração de notificação (inclui consentimento e estado de progresso)
+    const { data: config } = await supabaseAdmin
       .from('notification_settings')
-      .select('last_block_index')
+      .select('last_block_index, user_email, consent_given_at')
       .eq('user_id', userId)
       .eq('session_id', session_id)
       .single()
 
-    // 4. Calcular o próximo bloco em ordem (volta ao 0 quando chegar no fim)
+    // 4. Verificar consentimento antes de qualquer envio (LGPD)
+    if (!config?.consent_given_at) {
+      return NextResponse.json({ error: 'Consentimento de email não registrado' }, { status: 403 })
+    }
+
+    // 5. Calcular o próximo bloco em ordem
     const lastIndex = config?.last_block_index ?? -1
     const proximoIndex = (lastIndex + 1) % blocks.length
     const blocoEscolhido = blocks[proximoIndex]
 
-    // 5. Buscar dúvidas não resolvidas deste bloco específico
-    const { data: duvidas } = await supabase
+    // 6. Buscar dúvidas não resolvidas deste bloco
+    const { data: duvidas } = await supabaseAdmin
       .from('doubts')
       .select('description')
       .eq('block_id', blocoEscolhido.id)
       .eq('user_id', userId)
       .eq('resolved', false)
 
-    const duvidasTexto = (duvidas || []).map((d) => d.description)
+    const duvidasTexto = (duvidas || []).map((d: { description: string }) => d.description)
 
-    // 6. Enviar email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    // 7. Enviar email — NEXT_PUBLIC_APP_URL obrigatório em produção para links corretos nos emails
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
     await enviarEmailRevisao({
-      para: userEmail,
+      para: config.user_email,
       sessaoTitulo: session.title,
       blocoTitulo: blocoEscolhido.title,
       blocoConteudo: blocoEscolhido.content,
@@ -69,8 +77,8 @@ export async function POST(req: NextRequest) {
       blocoUrl: `${appUrl}/sessao/${session_id}/bloco/${blocoEscolhido.id}`,
     })
 
-    // 7. Atualizar last_block_index e last_sent_at
-    await supabase
+    // 8. Atualizar last_block_index e last_sent_at
+    await supabaseAdmin
       .from('notification_settings')
       .update({
         last_sent_at: new Date().toISOString(),
@@ -86,8 +94,7 @@ export async function POST(req: NextRequest) {
       total: blocks.length,
     })
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('❌ Erro ao enviar email:', msg)
-    return NextResponse.json({ error: `Erro ao enviar: ${msg}` }, { status: 500 })
+    console.error('❌ Erro ao enviar email:', error instanceof Error ? error.message : 'erro')
+    return NextResponse.json({ error: 'Erro ao enviar email de revisão' }, { status: 500 })
   }
 }

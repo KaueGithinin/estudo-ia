@@ -5,6 +5,10 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/precos',
+  '/privacidade',
+  '/termos',
+  '/api/cron(.*)', // protegida por CRON_SECRET, não por Clerk
 ])
 
 export default clerkMiddleware(async (auth, req) => {

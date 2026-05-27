@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, Send, Loader2, Check } from "lucide-react";
+import { Bell, BellOff, Send, Loader2, Check, Shield } from "lucide-react";
 
 interface Props {
   sessionId: string;
@@ -15,6 +15,8 @@ export default function NotificacaoConfig({ sessionId }: Props) {
   const [sending, setSending] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState("");
+  const [consentimento, setConsentimento] = useState(false);
+  const [consentimentoDado, setConsentimentoDado] = useState(false);
 
   // Carregar configuração atual
   useEffect(() => {
@@ -24,6 +26,10 @@ export default function NotificacaoConfig({ sessionId }: Props) {
       if (data.config) {
         setEnabled(data.config.enabled);
         setFrequency(data.config.frequency_hours);
+        if (data.config.consent_given_at) {
+          setConsentimentoDado(true);
+          setConsentimento(true);
+        }
       }
       setLoading(false);
     }
@@ -31,6 +37,12 @@ export default function NotificacaoConfig({ sessionId }: Props) {
   }, [sessionId]);
 
   const handleToggle = async (novoValor: boolean) => {
+    // Se está ativando e ainda não deu consentimento, exige checkbox
+    if (novoValor && !consentimentoDado && !consentimento) {
+      setErro("Você precisa aceitar receber emails antes de ativar as notificações.");
+      return;
+    }
+    setErro("");
     setEnabled(novoValor);
     setSaving(true);
     await fetch("/api/notificacoes/configurar", {
@@ -40,8 +52,10 @@ export default function NotificacaoConfig({ sessionId }: Props) {
         session_id: sessionId,
         enabled: novoValor,
         frequency_hours: frequency,
+        consent: consentimento && !consentimentoDado, // só registrar se for novo
       }),
     });
+    if (novoValor && consentimento) setConsentimentoDado(true);
     setSaving(false);
   };
 
@@ -110,6 +124,33 @@ export default function NotificacaoConfig({ sessionId }: Props) {
         </button>
       </div>
 
+      {/* Consentimento (mostrar apenas se ainda não deu e está tentando ativar) */}
+      {!consentimentoDado && (
+        <label className="flex items-start gap-2 cursor-pointer mb-3 p-3 bg-gray-800/60 rounded-lg border border-gray-700">
+          <input
+            type="checkbox"
+            checked={consentimento}
+            onChange={(e) => {
+              setConsentimento(e.target.checked);
+              setErro("");
+            }}
+            className="mt-0.5 accent-violet-500 shrink-0"
+          />
+          <span className="text-xs text-gray-400 leading-relaxed">
+            <Shield size={11} className="inline mr-1 text-violet-400" />
+            Concordo em receber emails de revisão de estudo do EstudoIA. Posso cancelar
+            a qualquer momento desativando as notificações.{" "}
+            <a href="/privacidade" className="text-violet-400 hover:underline" target="_blank">
+              Política de Privacidade
+            </a>
+          </span>
+        </label>
+      )}
+
+      {erro && (
+        <p className="text-red-400 text-xs mb-3">{erro}</p>
+      )}
+
       {enabled && (
         <>
           {/* Frequência */}
@@ -146,10 +187,6 @@ export default function NotificacaoConfig({ sessionId }: Props) {
               <><Send size={16} /> Enviar revisão agora</>
             )}
           </button>
-
-          {erro && (
-            <p className="text-red-400 text-xs mt-2">{erro}</p>
-          )}
 
           <p className="text-xs text-gray-600 mt-2 text-center">
             Os blocos são enviados em ordem, um por notificação

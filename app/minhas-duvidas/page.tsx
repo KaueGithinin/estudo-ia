@@ -8,24 +8,42 @@ import type { Doubt } from "@/lib/types";
 export default function MinhasDuvidasPage() {
   const [doubts, setDoubts] = useState<Doubt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroLoad, setErroLoad] = useState(false);
 
   useEffect(() => {
     async function loadDoubts() {
-      const response = await fetch("/api/duvidas");
-      const data = await response.json();
-      setDoubts(data.doubts || []);
-      setLoading(false);
+      try {
+        const response = await fetch("/api/duvidas");
+        if (!response.ok) throw new Error("falha");
+        const data = await response.json();
+        setDoubts(data.doubts || []);
+      } catch {
+        setErroLoad(true);
+      } finally {
+        setLoading(false);
+      }
     }
     loadDoubts();
   }, []);
 
   const handleResolver = async (doubtId: string) => {
-    await fetch("/api/duvidas", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ doubt_id: doubtId }),
-    });
+    // Remover da UI imediatamente (optimistic update)
     setDoubts((prev) => prev.filter((d) => d.id !== doubtId));
+    try {
+      const res = await fetch("/api/duvidas", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doubt_id: doubtId }),
+      });
+      if (!res.ok) throw new Error("falha");
+    } catch {
+      // Reverter se falhou
+      const response = await fetch("/api/duvidas").catch(() => null);
+      if (response?.ok) {
+        const data = await response.json();
+        setDoubts(data.doubts || []);
+      }
+    }
   };
 
   return (
@@ -55,6 +73,11 @@ export default function MinhasDuvidasPage() {
 
         {loading ? (
           <div className="text-center py-20 text-gray-500">Carregando...</div>
+        ) : erroLoad ? (
+          <div className="text-center py-20">
+            <AlertCircle size={48} className="text-red-500/50 mx-auto mb-4" />
+            <p className="text-gray-400">Erro ao carregar dúvidas. Recarregue a página.</p>
+          </div>
         ) : doubts.length === 0 ? (
           <div className="text-center py-20">
             <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
